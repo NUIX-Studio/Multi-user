@@ -1,14 +1,41 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 
 public class GrabbableBall : NetworkBehaviour
 {
+
+    public PrimaryButtonWatcher watcher;
+
+    public bool IsPressed = false; // used to display button state in the Unity Inspector window
+
     public float GrabDistance = 5.0f;
 
     private Rigidbody m_Rigidbody;
     private Material m_Material;
 
-    private NetworkVariable<bool> m_IsGrabbed = new NetworkVariable<bool>();
+    private Vector3 velocity = Vector3.zero;
+
+    //private NetworkVariable<bool> m_IsGrabbed = new NetworkVariable<bool>();
+
+
+    void Start()
+    {
+        watcher.primaryButtonPress.AddListener(onPrimaryButtonEvent);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void TranslatePositionServerRpc()
+    {
+        transform.Translate(Vector3.forward / 100.0f);
+    }
+
+    public void onPrimaryButtonEvent(bool pressed)
+    {
+        IsPressed = pressed;
+        if (pressed)
+            TranslatePositionServerRpc();
+    }
 
     private void Awake()
     {
@@ -22,87 +49,49 @@ public class GrabbableBall : NetworkBehaviour
         {
             return;
         }
-
-        if (m_Rigidbody)
-        {
-            m_Rigidbody.isKinematic = !IsServer || m_IsGrabbed.Value;
-        }
     }
 
     private void Update()
     {
+
         if (NetworkManager == null)
         {
             return;
         }
 
-        var localPlayerObject = NetworkManager?.SpawnManager?.GetLocalPlayerObject();
 
-        if (m_IsGrabbed.Value)
-        {
-            m_Material.color = Color.cyan;
-
-            if (IsOwner && Input.GetKeyDown(KeyCode.F))
-            {
-                ReleaseServerRpc();
-            }
-        }
-        else
+        if (IsOwner && !IsServer)
         {
             m_Material.color = Color.white;
-
-            if (localPlayerObject != null)
-            {
-                var distance = Vector3.Distance(transform.position, localPlayerObject.transform.position);
-                if (distance <= GrabDistance)
-                {
-                    m_Material.color = Color.yellow;
-
-                    if (Input.GetKeyDown(KeyCode.F))
-                    {
-                        TryGrabServerRpc();
-                    }
-                }
-            }
         }
     }
 
-    public override void OnNetworkObjectParentChanged(NetworkObject parentNetworkObject)
+
+    [ServerRpc(RequireOwnership = false)]
+    public void changeDiscOwnershipServerRpc(ServerRpcParams serverRpcParams = default)
     {
-        if (parentNetworkObject != null && (IsOwner || IsServer))
-        {
-            transform.localPosition = Vector3.up * 2;
-        }
+        var senderClientId = serverRpcParams.Receive.SenderClientId;
+        NetworkObject.ChangeOwnership(senderClientId);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void TryGrabServerRpc(ServerRpcParams serverRpcParams = default)
+    public void resetDiscOwnershipServerRpc()
     {
-        if (!m_IsGrabbed.Value)
-        {
-            var senderClientId = serverRpcParams.Receive.SenderClientId;
-            var senderPlayerObject = PlayerMovement.Players[senderClientId].NetworkObject;
-            if (senderPlayerObject != null)
-            {
-                NetworkObject.ChangeOwnership(senderClientId);
-
-                transform.parent = senderPlayerObject.transform;
-
-                m_IsGrabbed.Value = true;
-            }
-        }
+        NetworkObject.RemoveOwnership();
     }
 
-    [ServerRpc]
-    private void ReleaseServerRpc()
+    [ServerRpc(RequireOwnership = false)]
+    public void UpdateTranslationServerRpc()
     {
-        if (m_IsGrabbed.Value)
-        {
-            NetworkObject.RemoveOwnership();
 
-            transform.parent = null;
-
-            m_IsGrabbed.Value = false;
-        }
     }
+
+    [ClientRpc]
+    public void UpdateTranslationClientRpc()
+    {
+
+    }
+
+
 }
+ 
