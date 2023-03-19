@@ -9,7 +9,7 @@ At the same time, to support OpenXR framework instead of Oculus framework (which
 2. Gesture support
 
 ## Installation
-Download this project from github and open it in [Unity HUB](https://unity.cn/releases), Unity v.2022.2+. After opening it, navigate to Sample scene. In () properties, set the IP address of the server/host. If your device is a server, then keep the default value.
+Download this project from github and open it in [Unity HUB](https://unity.cn/releases), Unity v.2022.2.f9c9+. Turn on VPN and open the project from folder. After opening it, navigate to Sample scene. In () properties, set the IP address of the server/host. If your device is a server, then keep the default value.
 
 ## Synchronization of parameters
 By using [Unity Netcode for GameObjects](https://unity.com/products/netcode), the positions and rotations of the selected GameObjects are synchronized. Of course, each project using NUIX-Studio requires its own set of objects and their characterictics to be synchronized for multiple users. In the example scene it is shown how to synchronize the Light states. Mention:
